@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { BOOT_MESSAGES } from "@/data/index";
 
 interface BootSequenceProps {

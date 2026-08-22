@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { ContentNode } from "@/data/index";
 
@@ -76,6 +77,56 @@ export default function DesktopExperience({
           </div>
         </div>
 
+        <section
+          aria-label="Orientation"
+          style={{
+            pointerEvents: "all",
+            width: "100%",
+            maxWidth: "760px",
+            marginBottom: "18px",
+            padding: "0 20px",
+          }}
+        >
+          <div
+            style={{
+              border: "1px solid var(--border-dim)",
+              borderRadius: "12px",
+              background: "rgba(10, 10, 15, 0.72)",
+              padding: "16px",
+              display: "grid",
+              gap: "12px",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <p style={{ color: "var(--text-primary)", fontSize: "13px", lineHeight: 1.7, textAlign: "center" }}>
+              A living map of how I build systems, read to stay human, compete to stay honest, and look at the cosmos to stay small.
+            </p>
+            <div style={{ display: "flex", justifyContent: "center", gap: "12px", flexWrap: "wrap" }}>
+              {[
+                { href: "/now", label: "now" },
+                { href: "/essays", label: "essays" },
+                { href: "/notes", label: "notes" },
+                { href: "/about", label: "about" },
+              ].map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  style={{
+                    color: "var(--accent-drop)",
+                    border: "1px solid var(--border-terminal)",
+                    borderRadius: "999px",
+                    padding: "5px 10px",
+                    fontSize: "11px",
+                    textDecoration: "none",
+                  }}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <div style={{ pointerEvents: "all", width: "100%", maxWidth: "560px", padding: "0 20px" }}>
           <Terminal onNodeOpen={onNodeOpen} onConstellationFocus={onConstellationFocus} />
         </div>
@@ -106,8 +157,11 @@ export default function DesktopExperience({
               ♟ {lichessRating}
             </span>
           )}
-          <a href="/hire" style={{ color: "var(--accent-drop)", fontSize: "10px", fontFamily: "var(--font-mono)", textDecoration: "none", pointerEvents: "all", letterSpacing: "0.05em" }}>[hire]</a>
-          <a href="/about" style={{ color: "var(--text-dim)", fontSize: "10px", fontFamily: "var(--font-mono)", textDecoration: "none", pointerEvents: "all", letterSpacing: "0.05em" }}>[about]</a>
+          <Link href="/now" style={{ color: "var(--text-dim)", fontSize: "10px", fontFamily: "var(--font-mono)", textDecoration: "none", pointerEvents: "all", letterSpacing: "0.05em" }}>[now]</Link>
+          <Link href="/essays" style={{ color: "var(--text-dim)", fontSize: "10px", fontFamily: "var(--font-mono)", textDecoration: "none", pointerEvents: "all", letterSpacing: "0.05em" }}>[essays]</Link>
+          <Link href="/notes" style={{ color: "var(--text-dim)", fontSize: "10px", fontFamily: "var(--font-mono)", textDecoration: "none", pointerEvents: "all", letterSpacing: "0.05em" }}>[notes]</Link>
+          <Link href="/hire" style={{ color: "var(--accent-drop)", fontSize: "10px", fontFamily: "var(--font-mono)", textDecoration: "none", pointerEvents: "all", letterSpacing: "0.05em" }}>[hire]</Link>
+          <Link href="/about" style={{ color: "var(--text-dim)", fontSize: "10px", fontFamily: "var(--font-mono)", textDecoration: "none", pointerEvents: "all", letterSpacing: "0.05em" }}>[about]</Link>
         </div>
       </div>
     </div>
