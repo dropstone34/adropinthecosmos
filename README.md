@@ -7,7 +7,7 @@ A cosmic, terminal-inspired portfolio built with **Next.js 16**, **TypeScript**,
 - Interactive constellation graph navigation
 - Animated boot sequence & terminal interface
 - Desktop + mobile responsive experiences
-- NASA APOD integration
+- NASA APOD integration 
 - Lichess live game feed
 - SEO-optimised with sitemap, robots.txt, and web manifest
 
@@ -17,8 +17,6 @@ A cosmic, terminal-inspired portfolio built with **Next.js 16**, **TypeScript**,
 npm install
 npm run dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
 ## 🛠 Tech Stack
 
