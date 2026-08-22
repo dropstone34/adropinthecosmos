@@ -128,7 +128,7 @@ export default function DesktopExperience({
         </section>
 
         <div style={{ pointerEvents: "all", width: "100%", maxWidth: "560px", padding: "0 20px" }}>
-          <Terminal onNodeOpen={onNodeOpen} onConstellationFocus={onConstellationFocus} />
+          <Terminal onNodeOpen={onNodeOpen} onConstellationFocus={onConstellationFocus} onClose={onClose} />
         </div>
       </div>
 
@@ -160,6 +160,8 @@ export default function DesktopExperience({
           <Link href="/now" style={{ color: "var(--text-dim)", fontSize: "10px", fontFamily: "var(--font-mono)", textDecoration: "none", pointerEvents: "all", letterSpacing: "0.05em" }}>[now]</Link>
           <Link href="/essays" style={{ color: "var(--text-dim)", fontSize: "10px", fontFamily: "var(--font-mono)", textDecoration: "none", pointerEvents: "all", letterSpacing: "0.05em" }}>[essays]</Link>
           <Link href="/notes" style={{ color: "var(--text-dim)", fontSize: "10px", fontFamily: "var(--font-mono)", textDecoration: "none", pointerEvents: "all", letterSpacing: "0.05em" }}>[notes]</Link>
+          <a href="https://github.com/dropstone34" target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-dim)", fontSize: "10px", fontFamily: "var(--font-mono)", textDecoration: "none", pointerEvents: "all", letterSpacing: "0.05em" }}>[github]</a>
+          <a href="https://www.linkedin.com/in/prakhar34" target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-dim)", fontSize: "10px", fontFamily: "var(--font-mono)", textDecoration: "none", pointerEvents: "all", letterSpacing: "0.05em" }}>[linkedin]</a>
           <Link href="/hire" style={{ color: "var(--accent-drop)", fontSize: "10px", fontFamily: "var(--font-mono)", textDecoration: "none", pointerEvents: "all", letterSpacing: "0.05em" }}>[hire]</Link>
           <Link href="/about" style={{ color: "var(--text-dim)", fontSize: "10px", fontFamily: "var(--font-mono)", textDecoration: "none", pointerEvents: "all", letterSpacing: "0.05em" }}>[about]</Link>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { TERMINAL_COMMANDS, allNodes, ContentNode } from "@/data/index";
 
 interface TerminalLine {
@@ -12,18 +13,22 @@ interface TerminalLine {
 interface TerminalProps {
   onNodeOpen: (node: ContentNode) => void;
   onConstellationFocus: (constellation: string | null) => void;
+  onClose?: () => void;
 }
 
 let lineIdCounter = 0;
 
-const GHOST_HINTS = ["try: whoami", "try: explore", "try: wander", "try: cosmos"];
+const GHOST_HINTS = ["try: whoami", "try: now", "try: essays", "try: github", "try: signals"];
 
-export default function Terminal({ onNodeOpen, onConstellationFocus }: TerminalProps) {
+export default function Terminal({ onNodeOpen, onConstellationFocus, onClose }: TerminalProps) {
+  const router = useRouter();
   const [lines, setLines] = useState<TerminalLine[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [showGhostHint, setShowGhostHint] = useState(false);
   const [ghostHintIndex, setGhostHintIndex] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -159,10 +164,26 @@ export default function Terminal({ onNodeOpen, onConstellationFocus }: TerminalP
           return;
         }
 
-        if (found.command === "hire") {
+        if (["hire", "now", "essays", "notes", "build", "signals"].includes(found.command)) {
           await typeOutput([output]);
           setTimeout(() => {
-            window.open("/hire", "_blank");
+            router.push(`/${found.command}`);
+          }, 300);
+          return;
+        }
+
+        if (found.command === "github") {
+          await typeOutput([output]);
+          setTimeout(() => {
+            window.open("https://github.com/dropstone34", "_blank", "noopener,noreferrer");
+          }, 300);
+          return;
+        }
+
+        if (found.command === "linkedin") {
+          await typeOutput([output]);
+          setTimeout(() => {
+            window.open("https://www.linkedin.com/in/prakhar34", "_blank", "noopener,noreferrer");
           }, 300);
           return;
         }
@@ -200,7 +221,7 @@ export default function Terminal({ onNodeOpen, onConstellationFocus }: TerminalP
 
       addLine("dim", "");
     },
-    [addLine, typeOutput, onNodeOpen, onConstellationFocus]
+    [addLine, typeOutput, onNodeOpen, onConstellationFocus, router]
   );
 
   const handleKeyDown = useCallback(
@@ -218,22 +239,56 @@ export default function Terminal({ onNodeOpen, onConstellationFocus }: TerminalP
     inputRef.current?.focus();
   }, []);
 
+  const handleClear = useCallback(() => {
+    setLines([]);
+    setInputValue("");
+    setShowGhostHint(false);
+    onConstellationFocus(null);
+    onClose?.();
+    inputRef.current?.focus();
+  }, [onClose, onConstellationFocus]);
+
+  const terminalStyle = {
+    width: "100%",
+    maxWidth: isMaximized ? "900px" : "560px",
+  };
+
   return (
-    <div className="terminal-window" style={{ width: "100%", maxWidth: "560px" }}>
+    <div className="terminal-window" style={terminalStyle}>
       {/* Title bar */}
       <div className="terminal-titlebar">
-        <div className="terminal-dot terminal-dot-red" />
-        <div className="terminal-dot terminal-dot-yellow" />
-        <div className="terminal-dot terminal-dot-green" />
-        <span className="terminal-title">prakhar@cosmos:~</span>
+        <button
+          aria-label="Clear terminal"
+          className="terminal-dot terminal-dot-red"
+          onClick={handleClear}
+          type="button"
+          title="Clear terminal"
+        />
+        <button
+          aria-label={isMinimized ? "Restore terminal" : "Minimize terminal"}
+          className="terminal-dot terminal-dot-yellow"
+          onClick={() => setIsMinimized((value) => !value)}
+          type="button"
+          title={isMinimized ? "Restore terminal" : "Minimize terminal"}
+        />
+        <button
+          aria-label={isMaximized ? "Restore terminal size" : "Maximize terminal"}
+          className="terminal-dot terminal-dot-green"
+          onClick={() => setIsMaximized((value) => !value)}
+          type="button"
+          title={isMaximized ? "Restore terminal size" : "Maximize terminal"}
+        />
+        <span className="terminal-title">
+          prakhar@cosmos:~ {isMinimized ? "— minimized" : isMaximized ? "— expanded" : ""}
+        </span>
       </div>
 
-      {/* Body */}
+      {!isMinimized && (
       <div
         ref={bodyRef}
         className="terminal-body"
         onClick={handleContainerClick}
-        style={{ cursor: "text" }}
+        style={{ cursor: "text", minHeight: isMaximized ? "460px" : undefined, maxHeight: isMaximized ? "72vh" : undefined }}
       >
         {/* Rendered lines */}
         {lines.map((line) => (
@@ -299,6 +354,7 @@ export default function Terminal({ onNodeOpen, onConstellationFocus }: TerminalP
           {isTyping && <span className="cursor" />}
         </div>
       </div>
+      )}
     </div>
   );
 }

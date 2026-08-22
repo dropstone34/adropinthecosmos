@@ -35,17 +35,9 @@ a drop in the cosmos.
   },
   {
     command: "build",
-    description: "enter the build constellation",
+    description: "engineering work and projects",
     type: "navigate",
-    navigateTo: "qualcomm",
-    output: `◈ BUILD — what I make
-
-  qualcomm    — Software Engineer, Agentic AI & Bluetooth
-  agentic-ai  — on-device intelligence
-  bluetooth   — the invisible thread
-  this-site   — dropstone.in, open source
-
-→ type any name to explore`,
+    output: `opening /build...`,
   },
   {
     command: "mind",
@@ -111,6 +103,42 @@ a drop in the cosmos.
   Roots of Romanticism        — Isaiah Berlin
 
 → type any title (e.g. 'frankl') to read more`,
+  },
+  {
+    command: "now",
+    description: "current signals",
+    type: "navigate",
+    output: `opening /now...`,
+  },
+  {
+    command: "essays",
+    description: "long-form writing",
+    type: "navigate",
+    output: `opening /essays...`,
+  },
+  {
+    command: "notes",
+    description: "short garden entries",
+    type: "navigate",
+    output: `opening /notes...`,
+  },
+  {
+    command: "signals",
+    description: "live public signals",
+    type: "navigate",
+    output: `opening /signals...`,
+  },
+  {
+    command: "github",
+    description: "open GitHub profile",
+    type: "info",
+    output: `opening github.com/dropstone34...`,
+  },
+  {
+    command: "linkedin",
+    description: "open LinkedIn profile",
+    type: "info",
+    output: `opening linkedin.com/in/prakhar34...`,
   },
   {
     command: "hire",
@@ -232,13 +260,20 @@ AUTHOR
   explore     — show all constellations
   wander      — go somewhere unexpected
   
-  build       — what I make
+  now         — current signals
+  essays      — long-form writing
+  notes       — short garden entries
+  build       — engineering work and projects
+  signals     — live public signals
+  
   mind        — what I think
   cosmos      — what I wonder
   arena       — how I compete
   
   chess       — live chess rating
   books       — the reading list
+  github      — open GitHub
+  linkedin    — open LinkedIn
   hire        — work with me
   subscribe   — Substack newsletter
   manifesto   — what I believe

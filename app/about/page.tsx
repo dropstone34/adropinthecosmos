@@ -225,7 +225,7 @@ export default function AboutPage() {
                     lineHeight: "1.8",
                   }}
                 >
-                  Built with Next.js 15, TypeScript, Tailwind CSS, Canvas API, d3-force,
+                  Built with Next.js 16, TypeScript, Tailwind CSS, Canvas API, d3-force,
                   Framer Motion, GSAP.
                   <br />
                   The star field is a force-directed graph. Every star is a content node.
@@ -276,7 +276,7 @@ export default function AboutPage() {
                   [email]
                 </a>
                 <a
-                  href="https://github.com/prakhar"
+                    href="https://github.com/dropstone34"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -286,6 +286,18 @@ export default function AboutPage() {
                   }}
                 >
                   [github]
+                </a>
+                <a
+                  href="https://www.linkedin.com/in/prakhar34"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: "var(--text-muted)",
+                    fontSize: "12px",
+                    textDecoration: "none",
+                  }}
+                >
+                  [linkedin]
                 </a>
                 <a
                   href="https://substack.com/@dropstone"
