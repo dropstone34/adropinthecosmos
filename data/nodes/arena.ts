@@ -4,17 +4,22 @@ export const arenaNodes: ContentNode[] = [
   {
     id: "chess-rating",
     title: "Chess",
-    subtitle: "Lichess: Dropstone34",
+    subtitle: "Lichess: Dropstone34 · FIDE: 531000363",
     type: "stat",
     constellation: "arena",
     connections: ["whoami", "dubov", "chess-philosophy", "cruyff"],
     weight: 0.85,
-    tooltip: "Chess · Lichess: Dropstone34 · live rating",
+    tooltip: "Chess · Lichess: Dropstone34 · FIDE: 531000363 · live rating",
     color: "#FFD700",
     content: `Chess is the game I keep coming back to.
 
 Lichess: Dropstone34
+FIDE: 531000363
 Rating: [live — fetched from Lichess API]
+
+Profiles:
+- https://lichess.org/@/Dropstone34
+- https://ratings.fide.com/profile/531000363
 
 Chess teaches you things no other game does:
 - Every position has a truth. Find it.
@@ -26,7 +31,7 @@ I play mostly rapid and blitz.
 I study openings but I love the middlegame —
 the moment when the position becomes unique,
 when the book ends and you are alone with the board.`,
-    meta: { platform: "Lichess", username: "Dropstone34" },
+    meta: { platform: "Lichess + FIDE", username: "Dropstone34", fide_id: "531000363" },
   },
   {
     id: "dubov",

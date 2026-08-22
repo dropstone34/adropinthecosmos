@@ -119,6 +119,15 @@ export default function AboutPage() {
                   >
                     Lichess: Dropstone34
                   </a>
+                  {" · "}
+                  <a
+                    href="https://ratings.fide.com/profile/531000363"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "var(--text-primary)", textDecoration: "none" }}
+                  >
+                    FIDE: 531000363
+                  </a>
                   . Favorite player: Daniil Dubov (chess as jazz).
                   <br />
                   <span style={{ color: "var(--accent-gold)" }}>⚽ Football</span> — Cruyff,

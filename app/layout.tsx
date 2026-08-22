@@ -98,6 +98,7 @@ export default function RootLayout({
                 "Software Engineer at Qualcomm working on Agentic AI and Bluetooth. Passionate about astrophysics, philosophy, chess, and literature.",
               sameAs: [
                 "https://lichess.org/@/Dropstone34",
+                "https://ratings.fide.com/profile/531000363",
                 "https://github.com/dropstone34",
                 "https://www.linkedin.com/in/prakhar34",
               ],

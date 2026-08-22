@@ -8,7 +8,7 @@ export const TERMINAL_COMMANDS: TerminalCommand[] = [
     navigateTo: "whoami",
     output: `Prakhar
 Software Engineer @ Qualcomm (Agentic AI & Bluetooth)
-Lichess: Dropstone34 | 10k PR: 48:00
+Lichess: Dropstone34 | FIDE: 531000363 | 10k PR: 48:00
 a drop in the cosmos.
 
 → try: explore · wander · build · mind · cosmos · arena`,
@@ -85,7 +85,8 @@ a drop in the cosmos.
     description: "chess stats and philosophy",
     type: "live",
     navigateTo: "chess-rating",
-    output: `fetching Lichess data for Dropstone34...`,
+    output: `fetching Lichess data for Dropstone34...
+FIDE profile: https://ratings.fide.com/profile/531000363`,
   },
   {
     command: "books",
