@@ -1,26 +1,575 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 @import "tailwindcss";
 
+/* ============================================
+   COSMIC DARK THEME — adrop.in
+   "a drop in the cosmos"
+   ============================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Core palette */
+  --bg-primary: #0A0A0F;
+  --bg-terminal: #0F0F1A;
+  --bg-panel: #12121F;
+  --border-terminal: #2A2A4A;
+  --border-dim: #1A1A2E;
+
+  /* Text */
+  --text-primary: #E8E8E8;
+  --text-muted: #4A4A6A;
+  --text-dim: #2A2A4A;
+
+  /* Accents */
+  --accent-drop: #7B68EE;       /* cosmic purple — the drop */
+  --accent-gold: #FFD700;       /* chess, Cruyff, the important things */
+  --accent-green: #00FF88;      /* success, running */
+  --accent-red: #FF4444;        /* errors, F1 */
+  --accent-cyan: #00D4FF;       /* cosmos, astrophysics */
+
+  /* Stars */
+  --star-bright: rgba(255, 255, 255, 0.9);
+  --star-mid: rgba(255, 255, 255, 0.5);
+  --star-dim: rgba(255, 255, 255, 0.2);
+
+  /* Constellation lines */
+  --constellation-line: rgba(123, 104, 238, 0.3);
+
+  /* Glow effects */
+  --glow-drop: 0 0 20px rgba(123, 104, 238, 0.4);
+  --glow-gold: 0 0 15px rgba(255, 215, 0, 0.3);
+  --glow-text: 0 0 10px rgba(232, 232, 232, 0.1);
+
+  /* Typography */
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+
+  /* Timing */
+  --transition-fast: 150ms ease;
+  --transition-mid: 300ms ease;
+  --transition-slow: 600ms ease;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ============================================
+   RESET & BASE
+   ============================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   SCROLLBAR — cosmic style
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-terminal);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-drop);
+}
+
+/* ============================================
+   SELECTION
+   ============================================ */
+
+::selection {
+  background: rgba(123, 104, 238, 0.3);
+  color: var(--text-primary);
+}
+
+/* ============================================
+   TERMINAL STYLES
+   ============================================ */
+
+.terminal-window {
+  background: var(--bg-terminal);
+  border: 1px solid var(--border-terminal);
+  border-radius: 8px;
+  box-shadow: var(--glow-drop), 0 20px 60px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+}
+
+.terminal-titlebar {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-terminal);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.terminal-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.terminal-dot-red { background: #FF5F57; }
+.terminal-dot-yellow { background: #FFBD2E; }
+.terminal-dot-green { background: #28CA41; }
+
+.terminal-title {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-left: 8px;
+  letter-spacing: 0.05em;
+}
+
+.terminal-body {
+  padding: 20px;
+  min-height: 300px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.terminal-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.terminal-prompt {
+  color: var(--accent-drop);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.terminal-prompt-path {
+  color: var(--accent-green);
+  font-size: 12px;
+}
+
+.terminal-input {
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.terminal-output {
+  color: var(--text-muted);
+  padding-left: 0;
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.terminal-output.highlight {
+  color: var(--accent-drop);
+}
+
+.terminal-output.gold {
+  color: var(--accent-gold);
+}
+
+.terminal-output.green {
+  color: var(--accent-green);
+}
+
+.terminal-output.cyan {
+  color: var(--accent-cyan);
+}
+
+.terminal-output.error {
+  color: var(--accent-red);
+}
+
+.terminal-output.dim {
+  color: var(--text-dim);
+}
+
+/* ============================================
+   CURSOR
+   ============================================ */
+
+.cursor {
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  background: var(--accent-drop);
+  animation: blink 1.2s step-end infinite;
+  vertical-align: text-bottom;
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ============================================
+   DROP ANIMATION
+   ============================================ */
+
+.drop-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drop-shape {
+  fill: none;
+  stroke: var(--accent-drop);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 8px rgba(123, 104, 238, 0.6));
+  animation: drop-fall 4s ease-in-out infinite;
+}
+
+@keyframes drop-fall {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(6px); }
+}
+
+.drop-ripple {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid var(--accent-drop);
+  animation: ripple-out 2s ease-out infinite;
+  opacity: 0;
+}
+
+@keyframes ripple-out {
+  0% { transform: scale(0.5); opacity: 0.6; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* ============================================
+   STAR FIELD
+   ============================================ */
+
+.star-field-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.star-field-canvas.interactive {
+  pointer-events: all;
+}
+
+/* ============================================
+   CONSTELLATION PANEL
+   ============================================ */
+
+.constellation-panel {
+  background: var(--bg-terminal);
+  border: 1px solid var(--border-terminal);
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: var(--glow-drop), 0 20px 60px rgba(0, 0, 0, 0.8);
+}
+
+.constellation-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.constellation-icon {
+  color: var(--accent-drop);
+  font-size: 18px;
+}
+
+.constellation-title {
+  color: var(--accent-drop);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ============================================
+   BOOT SEQUENCE
+   ============================================ */
+
+.boot-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  font-family: var(--font-mono);
+}
+
+.boot-ascii {
+  color: var(--accent-drop);
+  font-size: clamp(6px, 1.2vw, 14px);
+  line-height: 1.2;
+  text-align: center;
+  filter: drop-shadow(0 0 20px rgba(123, 104, 238, 0.5));
+  white-space: pre;
+}
+
+.boot-tagline {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-top: 24px;
+  letter-spacing: 0.05em;
+}
+
+.boot-tagline span {
+  color: var(--accent-drop);
+}
+
+.boot-progress {
+  margin-top: 32px;
+  width: 300px;
+}
+
+.boot-progress-bar {
+  height: 2px;
+  background: var(--border-terminal);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.boot-progress-fill {
+  height: 100%;
+  background: var(--accent-drop);
+  border-radius: 1px;
+  box-shadow: 0 0 8px var(--accent-drop);
+  transition: width 0.1s linear;
+}
+
+.boot-progress-text {
+  color: var(--text-muted);
+  font-size: 11px;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.boot-skip {
+  position: absolute;
+  bottom: 32px;
+  right: 32px;
+  color: var(--text-dim);
+  font-size: 11px;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  letter-spacing: 0.05em;
+}
+
+.boot-skip:hover {
+  color: var(--text-muted);
+}
+
+/* ============================================
+   SCANLINE EFFECT (subtle CRT)
+   ============================================ */
+
+.scanlines::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ============================================
+   GHOST HINT
+   ============================================ */
+
+.ghost-hint {
+  color: var(--text-dim);
+  font-size: 12px;
+  font-style: italic;
+  animation: ghost-pulse 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes ghost-pulse {
+  0%, 100% { opacity: 0; }
+  30%, 70% { opacity: 0.6; }
+}
+
+/* ============================================
+   PROGRESS BAR (inline)
+   ============================================ */
+
+.progress-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.progress-track {
+  display: inline-block;
+  width: 120px;
+  height: 8px;
+  background: var(--border-terminal);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent-green);
+  border-radius: 4px;
+  box-shadow: 0 0 6px var(--accent-green);
+}
+
+/* ============================================
+   TOOLTIP
+   ============================================ */
+
+.star-tooltip {
+  position: fixed;
+  background: var(--bg-terminal);
+  border: 1px solid var(--border-terminal);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-primary);
+  pointer-events: none;
+  z-index: 100;
+  max-width: 200px;
+  box-shadow: var(--glow-drop);
+  transform: translate(-50%, -120%);
+}
+
+.star-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  background: var(--bg-terminal);
+  border-right: 1px solid var(--border-terminal);
+  border-bottom: 1px solid var(--border-terminal);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+/* ============================================
+   MOBILE CARD INTERFACE
+   ============================================ */
+
+@media (max-width: 768px) {
+  .mobile-card {
+    background: var(--bg-terminal);
+    border: 1px solid var(--border-terminal);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .mobile-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .mobile-card-icon {
+    color: var(--accent-drop);
+    font-size: 20px;
+  }
+
+  .mobile-card-title {
+    color: var(--accent-drop);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.text-drop { color: var(--accent-drop); }
+.text-gold { color: var(--accent-gold); }
+.text-green { color: var(--accent-green); }
+.text-cyan { color: var(--accent-cyan); }
+.text-red { color: var(--accent-red); }
+.text-muted { color: var(--text-muted); }
+.text-dim { color: var(--text-dim); }
+
+.glow-drop { text-shadow: 0 0 10px rgba(123, 104, 238, 0.5); }
+.glow-gold { text-shadow: 0 0 10px rgba(255, 215, 0, 0.4); }
+
+.border-drop { border-color: var(--border-terminal); }
+
+.font-mono { font-family: var(--font-mono); }
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+/* Typing animation */
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+/* Glow pulse */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 5px rgba(123, 104, 238, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(123, 104, 238, 0.6); }
+}
+
+.glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Star pulse for discoverable stars */
+@keyframes star-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.8); opacity: 1; }
 }
