@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import CliBar from "@/components/CliBar";
 
 const navItems = [
   { href: "/", label: "cosmos" },
@@ -19,7 +20,24 @@ interface SiteShellProps {
   children: ReactNode;
 }
 
+function deriveCliPath(command: string): string {
+  if (command.startsWith("cat essays/")) {
+    const slug = command.replace("cat essays/", "").replace(".md", "");
+    return `~/essays/${slug}`;
+  }
+  if (command.startsWith("cat notes/")) {
+    const slug = command.replace("cat notes/", "").replace(".md", "");
+    return `~/notes/${slug}`;
+  }
+  if (command.startsWith("cat ")) {
+    return "~";
+  }
+  return "~";
+}
+
 export default function SiteShell({ title, subtitle, command, children }: SiteShellProps) {
+  const cliPath = deriveCliPath(command);
+
   return (
     <main
       style={{
@@ -71,6 +89,8 @@ export default function SiteShell({ title, subtitle, command, children }: SiteSh
             ))}
           </div>
         </nav>
+
+        <CliBar initialPath={cliPath} />
 
         <section className="terminal-window">
           <div className="terminal-titlebar">

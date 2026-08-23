@@ -3,6 +3,23 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { TERMINAL_COMMANDS, allNodes, ContentNode } from "@/data/index";
+import {
+  resolvePath,
+  lsPath,
+  catPath,
+  getNodeForPath,
+  getConstellationForPath,
+  isLeafPath,
+  getPathColor,
+} from "@/lib/cli-fs";
+import {
+  playConstellationEntry,
+  playNodeEntry,
+  playNavigateBack,
+  playError,
+  setSoundEnabled,
+  isSoundEnabled,
+} from "@/lib/sounds";
 
 interface TerminalLine {
   id: number;
@@ -18,12 +35,19 @@ interface TerminalProps {
 
 let lineIdCounter = 0;
 
-const GHOST_HINTS = ["try: whoami", "try: now", "try: essays", "try: github", "try: signals"];
+const GHOST_HINTS = [
+  "try: ls",
+  "try: cd cosmos",
+  "try: whoami",
+  "try: cd essays",
+  "try: wander",
+];
 
 export default function Terminal({ onNodeOpen, onConstellationFocus, onClose }: TerminalProps) {
   const router = useRouter();
   const [lines, setLines] = useState<TerminalLine[]>([]);
   const [inputValue, setInputValue] = useState("");
+  const [cwd, setCwd] = useState("~/cosmos");
   const [showGhostHint, setShowGhostHint] = useState(false);
   const [ghostHintIndex, setGhostHintIndex] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
@@ -48,24 +72,19 @@ export default function Terminal({ onNodeOpen, onConstellationFocus, onClose }: 
     scrollToBottom();
   }, [lines, scrollToBottom]);
 
-  // Ghost hint after idle
   useEffect(() => {
     const startIdleTimer = () => {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       idleTimerRef.current = setTimeout(() => {
-        if (!hasInteracted.current) {
-          setShowGhostHint(true);
-        }
+        if (!hasInteracted.current) setShowGhostHint(true);
       }, 5000);
     };
-
     startIdleTimer();
     return () => {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
   }, []);
 
-  // Cycle ghost hints
   useEffect(() => {
     if (!showGhostHint) return;
     const interval = setInterval(() => {
@@ -75,22 +94,18 @@ export default function Terminal({ onNodeOpen, onConstellationFocus, onClose }: 
   }, [showGhostHint]);
 
   const typeOutput = useCallback(
-    (lines: string[], delay = 30) => {
+    (outputLines: string[], delay = 28) => {
       return new Promise<void>((resolve) => {
         setIsTyping(true);
         let i = 0;
-        const outputLines = lines;
-
         const next = () => {
           if (i < outputLines.length) {
             const line = outputLines[i];
-            // Detect line type from content
             let type: TerminalLine["type"] = "output";
             if (line.startsWith("◈") || line.startsWith("→")) type = "highlight";
             else if (line.startsWith("  Rating:") || line.includes("PR:")) type = "green";
-            else if (line.startsWith("  ─") || line.startsWith("  ═")) type = "dim";
-            else if (line.includes("Error:") || line.includes("cannot remove")) type = "error";
-
+            else if (line.startsWith("  ─") || line.startsWith("  ═") || line === "") type = "dim";
+            else if (line.includes("Error:") || line.includes("cannot remove") || line.startsWith("cd:") || line.startsWith("cat:")) type = "error";
             addLine(type, line);
             i++;
             setTimeout(next, delay);
@@ -107,95 +122,212 @@ export default function Terminal({ onNodeOpen, onConstellationFocus, onClose }: 
 
   const executeCommand = useCallback(
     async (raw: string) => {
-      const cmd = raw.trim().toLowerCase();
-      if (!cmd) return;
+      const trimmed = raw.trim();
+      if (!trimmed) return;
 
       hasInteracted.current = true;
       setShowGhostHint(false);
 
-      // Add input line
-      addLine("input", raw.trim());
-
-      // Empty line separator
+      addLine("input", trimmed);
       addLine("dim", "");
 
-      // Find matching command
+      const lower = trimmed.toLowerCase();
+      const [cmd, ...args] = trimmed.split(/\s+/);
+      const cmdLower = cmd.toLowerCase();
+
+      if (cmdLower === "cd") {
+        const target = args.join(" ") || "~";
+        if (target === "~" || target === "/") {
+          setCwd("~");
+          playNavigateBack();
+          onConstellationFocus(null);
+          await typeOutput(["~"]);
+          addLine("dim", "");
+          return;
+        }
+
+        const result = resolvePath(cwd, target);
+        if (result.error) {
+          playError();
+          await typeOutput([`cd: ${result.error}`]);
+          addLine("dim", "");
+          return;
+        }
+
+        const newCwd = result.path;
+        setCwd(newCwd);
+
+        const constellation = getConstellationForPath(newCwd);
+        if (constellation) onConstellationFocus(constellation);
+
+        if (isLeafPath(newCwd)) {
+          const node = getNodeForPath(newCwd);
+          if (node) {
+            const c = node.constellation as "drop" | "build" | "mind" | "cosmos" | "arena";
+            playNodeEntry(c);
+            await typeOutput([newCwd, "", node.tooltip]);
+            setTimeout(() => onNodeOpen(node), 400);
+          }
+        } else if (constellation) {
+          playConstellationEntry(constellation as "drop" | "build" | "mind" | "cosmos" | "arena");
+          const entries = lsPath(newCwd);
+          const lines = [newCwd, ""];
+          entries.forEach((e) => {
+            lines.push(`  ${e.name.padEnd(28)} ${e.description}`);
+          });
+          lines.push("", "→ cd <name> to enter · ls to list · cd .. to go back");
+          await typeOutput(lines);
+        } else {
+          playNavigateBack();
+          const entries = lsPath(newCwd);
+          const lines = [newCwd, ""];
+          entries.forEach((e) => {
+            lines.push(`  ${e.type === "dir" ? "/" : " "}${e.name.padEnd(27)} ${e.description}`);
+          });
+          await typeOutput(lines);
+        }
+
+        addLine("dim", "");
+        return;
+      }
+
+      if (cmdLower === "ls") {
+        const target = args[0] ? resolvePath(cwd, args[0]).path : cwd;
+        const entries = lsPath(target);
+        if (entries.length === 0) {
+          await typeOutput([`ls: cannot access '${target}': no entries`]);
+        } else {
+          const out = entries.map(
+            (e) => `  ${e.type === "dir" ? "/" : " "}${e.name.padEnd(28)} ${e.description}`
+          );
+          await typeOutput([target, "", ...out]);
+        }
+        addLine("dim", "");
+        return;
+      }
+
+      if (cmdLower === "pwd") {
+        await typeOutput([cwd]);
+        addLine("dim", "");
+        return;
+      }
+
+      if (cmdLower === "exit") {
+        setCwd("~/cosmos");
+        onConstellationFocus(null);
+        playNavigateBack();
+        await typeOutput(["returning to ~/cosmos"]);
+        addLine("dim", "");
+        return;
+      }
+
+      if (cmdLower === "cat") {
+        const target = args.join(" ");
+        if (!target) {
+          await typeOutput(["cat: missing operand"]);
+          addLine("dim", "");
+          return;
+        }
+        const resolved = resolvePath(cwd, target);
+        const content = catPath(resolved.path);
+        if (!content) {
+          playError();
+          await typeOutput([`cat: ${target}: no such file`]);
+        } else {
+          await typeOutput(content.split("\n"), 18);
+        }
+        addLine("dim", "");
+        return;
+      }
+
+      if (cmdLower === "sound") {
+        const arg = args[0]?.toLowerCase();
+        if (arg === "off") {
+          setSoundEnabled(false);
+          await typeOutput(["sound: off"]);
+        } else if (arg === "on") {
+          setSoundEnabled(true);
+          await typeOutput(["sound: on"]);
+        } else {
+          await typeOutput([`sound: ${isSoundEnabled() ? "on" : "off"}`, "→ sound on · sound off"]);
+        }
+        addLine("dim", "");
+        return;
+      }
+
       const found = TERMINAL_COMMANDS.find(
         (c) =>
-          c.command === cmd ||
-          (c.aliases && c.aliases.some((a) => a === cmd)) ||
-          // Partial match for node IDs
-          c.command === cmd.split(" ")[0]
+          c.command === lower ||
+          (c.aliases && c.aliases.some((a) => a === lower)) ||
+          c.command === lower.split(" ")[0]
       );
 
-      // Check for node ID direct navigation
       const nodeMatch = allNodes.find(
         (n) =>
-          n.id === cmd ||
-          n.title.toLowerCase() === cmd ||
-          n.id.replace(/-/g, " ") === cmd ||
-          // Short aliases
-          (cmd === "frankl" && n.id === "mans-search") ||
-          (cmd === "frost" && n.id === "frost-poem") ||
-          (cmd === "fermi" && n.id === "fermi-paradox") ||
-          (cmd === "vedic" && n.id === "vedic-cosmos") ||
-          (cmd === "scale" && n.id === "cosmos-scale") ||
-          (cmd === "pale-blue-dot" && n.id === "pale-blue-dot") ||
-          (cmd === "dubov" && n.id === "dubov") ||
-          (cmd === "cruyff" && n.id === "cruyff") ||
-          (cmd === "nietzsche" && n.id === "nietzsche") ||
-          (cmd === "dostoevsky" && n.id === "dostoevsky") ||
-          (cmd === "rousseau" && n.id === "rousseau") ||
-          (cmd === "football" && n.id === "cruyff") ||
-          (cmd === "f1" && n.id === "f1-racing") ||
-          (cmd === "running" && n.id === "running") ||
-          (cmd === "chess" && n.id === "chess-rating")
+          n.id === lower ||
+          n.title.toLowerCase() === lower ||
+          n.id.replace(/-/g, " ") === lower ||
+          (lower === "frankl" && n.id === "mans-search") ||
+          (lower === "frost" && n.id === "frost-poem") ||
+          (lower === "fermi" && n.id === "fermi-paradox") ||
+          (lower === "vedic" && n.id === "vedic-cosmos") ||
+          (lower === "scale" && n.id === "cosmos-scale") ||
+          (lower === "dubov" && n.id === "dubov") ||
+          (lower === "cruyff" && n.id === "cruyff") ||
+          (lower === "nietzsche" && n.id === "nietzsche") ||
+          (lower === "dostoevsky" && n.id === "dostoevsky") ||
+          (lower === "rousseau" && n.id === "rousseau") ||
+          (lower === "football" && n.id === "cruyff") ||
+          (lower === "f1" && n.id === "f1-racing") ||
+          (lower === "running" && n.id === "running") ||
+          (lower === "chess" && n.id === "chess-rating")
       );
 
       if (found) {
-        const output =
-          typeof found.output === "function" ? found.output([]) : found.output;
+        const output = typeof found.output === "function" ? found.output([]) : found.output;
 
-        // Handle special commands
         if (found.command === "wander") {
           const randomNode = allNodes[Math.floor(Math.random() * allNodes.length)];
+          const c = randomNode.constellation as "drop" | "build" | "mind" | "cosmos" | "arena";
+          playNodeEntry(c);
           await typeOutput([`wandering to: ${randomNode.title}...`, "", randomNode.tooltip]);
           setTimeout(() => onNodeOpen(randomNode), 400);
+          addLine("dim", "");
           return;
         }
 
         if (["hire", "now", "essays", "notes", "build", "signals"].includes(found.command)) {
           await typeOutput([output]);
-          setTimeout(() => {
-            router.push(`/${found.command}`);
-          }, 300);
+          setTimeout(() => router.push(`/${found.command}`), 300);
+          addLine("dim", "");
           return;
         }
 
         if (found.command === "github") {
           await typeOutput([output]);
-          setTimeout(() => {
-            window.open("https://github.com/dropstone34", "_blank", "noopener,noreferrer");
-          }, 300);
+          setTimeout(() => window.open("https://github.com/dropstone34", "_blank", "noopener,noreferrer"), 300);
+          addLine("dim", "");
           return;
         }
 
         if (found.command === "linkedin") {
           await typeOutput([output]);
-          setTimeout(() => {
-            window.open("https://www.linkedin.com/in/prakhar34", "_blank", "noopener,noreferrer");
-          }, 300);
+          setTimeout(() => window.open("https://www.linkedin.com/in/prakhar34", "_blank", "noopener,noreferrer"), 300);
+          addLine("dim", "");
           return;
         }
 
         if (found.command === "subscribe") {
           await typeOutput(output.split("\n"));
+          addLine("dim", "");
           return;
         }
 
-        // Constellation focus commands
         if (["build", "mind", "cosmos", "arena", "drop"].includes(found.command)) {
+          const c = found.command as "drop" | "build" | "mind" | "cosmos" | "arena";
+          playConstellationEntry(c);
           onConstellationFocus(found.command);
+          setCwd(`~/${found.command}`);
         }
 
         await typeOutput(output.split("\n"));
@@ -203,25 +335,29 @@ export default function Terminal({ onNodeOpen, onConstellationFocus, onClose }: 
         if (found.navigateTo) {
           const node = allNodes.find((n) => n.id === found.navigateTo);
           if (node) {
+            const c = node.constellation as "drop" | "build" | "mind" | "cosmos" | "arena";
+            playNodeEntry(c);
             setTimeout(() => onNodeOpen(node), 600);
           }
         }
       } else if (nodeMatch) {
+        const c = nodeMatch.constellation as "drop" | "build" | "mind" | "cosmos" | "arena";
+        playNodeEntry(c);
         await typeOutput([`opening: ${nodeMatch.title}...`]);
         setTimeout(() => onNodeOpen(nodeMatch), 400);
       } else {
-        // Unknown command
+        playError();
         await typeOutput([
-          `command not found: ${cmd}`,
-          ``,
-          `type 'help' for available commands.`,
-          `or just wander.`,
+          `command not found: ${trimmed}`,
+          "",
+          "type 'help' for available commands.",
+          "or just wander.",
         ]);
       }
 
       addLine("dim", "");
     },
-    [addLine, typeOutput, onNodeOpen, onConstellationFocus, router]
+    [addLine, typeOutput, onNodeOpen, onConstellationFocus, router, cwd]
   );
 
   const handleKeyDown = useCallback(
@@ -248,14 +384,13 @@ export default function Terminal({ onNodeOpen, onConstellationFocus, onClose }: 
     inputRef.current?.focus();
   }, [onClose, onConstellationFocus]);
 
-  const terminalStyle = {
-    width: "100%",
-    maxWidth: isMaximized ? "900px" : "560px",
-  };
+  const pathColor = getPathColor(cwd);
 
   return (
-    <div className="terminal-window" style={terminalStyle}>
-      {/* Title bar */}
+    <div
+      className="terminal-window"
+      style={{ width: "100%", maxWidth: isMaximized ? "900px" : "560px" }}
+    >
       <div className="terminal-titlebar">
         <button
           aria-label="Clear terminal"
@@ -267,93 +402,94 @@ export default function Terminal({ onNodeOpen, onConstellationFocus, onClose }: 
         <button
           aria-label={isMinimized ? "Restore terminal" : "Minimize terminal"}
           className="terminal-dot terminal-dot-yellow"
-          onClick={() => setIsMinimized((value) => !value)}
+          onClick={() => setIsMinimized((v) => !v)}
           type="button"
           title={isMinimized ? "Restore terminal" : "Minimize terminal"}
         />
         <button
           aria-label={isMaximized ? "Restore terminal size" : "Maximize terminal"}
           className="terminal-dot terminal-dot-green"
-          onClick={() => setIsMaximized((value) => !value)}
+          onClick={() => setIsMaximized((v) => !v)}
           type="button"
           title={isMaximized ? "Restore terminal size" : "Maximize terminal"}
         />
         <span className="terminal-title">
-          prakhar@cosmos:~ {isMinimized ? "— minimized" : isMaximized ? "— expanded" : ""}
+          prakhar@cosmos:{" "}
+          <span style={{ color: pathColor }}>{cwd}</span>
+          {isMinimized ? " — minimized" : isMaximized ? " — expanded" : ""}
         </span>
       </div>
 
       {!isMinimized && (
-      <div
-        ref={bodyRef}
-        className="terminal-body"
-        onClick={handleContainerClick}
-        style={{ cursor: "text", minHeight: isMaximized ? "460px" : undefined, maxHeight: isMaximized ? "72vh" : undefined }}
-      >
-        {/* Rendered lines */}
-        {lines.map((line) => (
-          <div key={line.id} className={`terminal-output ${line.type !== "input" ? line.type : ""}`}>
-            {line.type === "input" ? (
-              <div className="terminal-line">
-                <span className="terminal-prompt">
-                  <span className="terminal-prompt-path">~/cosmos</span>
-                  {" ❯ "}
-                </span>
-                <span className="terminal-input">{line.text}</span>
-              </div>
-            ) : (
-              <div style={{ paddingLeft: line.text === "" ? 0 : "4px" }}>{line.text}</div>
-            )}
-          </div>
-        ))}
+        <div
+          ref={bodyRef}
+          className="terminal-body"
+          onClick={handleContainerClick}
+          style={{
+            cursor: "text",
+            minHeight: isMaximized ? "460px" : undefined,
+            maxHeight: isMaximized ? "72vh" : undefined,
+          }}
+        >
+          {lines.map((line) => (
+            <div
+              key={line.id}
+              className={`terminal-output ${line.type !== "input" ? line.type : ""}`}
+            >
+              {line.type === "input" ? (
+                <div className="terminal-line">
+                  <span className="terminal-prompt">
+                    <span style={{ color: pathColor }}>{cwd}</span>
+                    {" ❯ "}
+                  </span>
+                  <span className="terminal-input">{line.text}</span>
+                </div>
+              ) : (
+                <div style={{ paddingLeft: line.text === "" ? 0 : "4px" }}>{line.text}</div>
+              )}
+            </div>
+          ))}
 
-        {/* Active input line */}
-        <div className="terminal-line" style={{ marginTop: "4px" }}>
-          <span className="terminal-prompt">
-            <span className="terminal-prompt-path">~/cosmos</span>
-            {" ❯ "}
-          </span>
-          <span className="terminal-input" style={{ position: "relative", flex: 1 }}>
-            <input
-              ref={inputRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={isTyping}
-              autoFocus
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              style={{
-                background: "transparent",
-                border: "none",
-                outline: "none",
-                color: "var(--text-primary)",
-                fontFamily: "var(--font-mono)",
-                fontSize: "13px",
-                width: "100%",
-                caretColor: "var(--accent-drop)",
-              }}
-            />
-            {/* Ghost hint */}
-            {showGhostHint && !inputValue && !isTyping && (
-              <span
-                className="ghost-hint"
+          <div className="terminal-line" style={{ marginTop: "4px" }}>
+            <span className="terminal-prompt">
+              <span style={{ color: pathColor }}>{cwd}</span>
+              {" ❯ "}
+            </span>
+            <span className="terminal-input" style={{ position: "relative", flex: 1 }}>
+              <input
+                ref={inputRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={isTyping}
+                autoFocus
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
                 style={{
-                  position: "absolute",
-                  left: 0,
-                  top: 0,
-                  pointerEvents: "none",
+                  background: "transparent",
+                  border: "none",
+                  outline: "none",
+                  color: "var(--text-primary)",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "13px",
+                  width: "100%",
+                  caretColor: "var(--accent-drop)",
                 }}
-              >
-                {GHOST_HINTS[ghostHintIndex]}
-              </span>
-            )}
-          </span>
-          {isTyping && <span className="cursor" />}
+              />
+              {showGhostHint && !inputValue && !isTyping && (
+                <span
+                  className="ghost-hint"
+                  style={{ position: "absolute", left: 0, top: 0, pointerEvents: "none" }}
+                >
+                  {GHOST_HINTS[ghostHintIndex]}
+                </span>
+              )}
+            </span>
+            {isTyping && <span className="cursor" />}
+          </div>
         </div>
-      </div>
       )}
     </div>
   );

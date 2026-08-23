@@ -1,13 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { ContentNode, allNodes } from "@/data/index";
-import {
-  recordInterest,
-  getSignal,
-  SiteSignal,
-  Constellation,
-} from "@/lib/site-intelligence";
+import { recordInterest, getSignal, SiteSignal, Constellation } from "@/lib/site-intelligence";
+import { resolvePath, lsPath, getNodeForPath, getConstellationForPath, isLeafPath, getPathColor } from "@/lib/cli-fs";
+import { playConstellationEntry, playNodeEntry, playNavigateBack, playError } from "@/lib/sounds";
 
 interface MobileViewProps {
   onNodeOpen: (node: ContentNode) => void;
@@ -27,7 +24,6 @@ const CONSTELLATIONS: {
   { id: "arena", label: "ARENA", symbol: "◎", color: "#00FF88", desc: "how I compete" },
 ];
 
-// Stable visual variant per node (0–3) based on id hash
 function nodeVariant(id: string): number {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffff;
@@ -41,7 +37,6 @@ function hexToRgb(hex: string): string {
   return `${r}, ${g}, ${b}`;
 }
 
-// Ambient tobacco haze particle — pure CSS, no canvas
 function HazeParticle({ index }: { index: number }) {
   const w = 40 + (index * 37) % 100;
   const h = 20 + (index * 23) % 50;
@@ -69,7 +64,6 @@ function HazeParticle({ index }: { index: number }) {
   );
 }
 
-// Interest vector bar at the bottom
 function SignalTrace({ signal }: { signal: SiteSignal }) {
   const maxVal = Math.max(...Object.values(signal.vector), 1);
   return (
@@ -144,13 +138,231 @@ function SignalTrace({ signal }: { signal: SiteSignal }) {
   );
 }
 
+interface CliOutputLine {
+  id: number;
+  text: string;
+  isError?: boolean;
+}
+
+let cliLineId = 0;
+
+function MobileCliBar({
+  cwd,
+  setCwd,
+  onNodeOpen,
+  onConstellationFocus,
+}: {
+  cwd: string;
+  setCwd: (p: string) => void;
+  onNodeOpen: (node: ContentNode) => void;
+  onConstellationFocus: (c: Constellation | null) => void;
+}) {
+  const [input, setInput] = useState("");
+  const [output, setOutput] = useState<CliOutputLine[]>([]);
+  const [expanded, setExpanded] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const emit = useCallback((text: string, isError = false) => {
+    setOutput((prev) => [...prev.slice(-5), { id: cliLineId++, text, isError }]);
+  }, []);
+
+  const execute = useCallback(
+    (raw: string) => {
+      const trimmed = raw.trim();
+      if (!trimmed) return;
+
+      const [cmd, ...args] = trimmed.split(/\s+/);
+      const cmdLower = cmd.toLowerCase();
+
+      if (cmdLower === "cd") {
+        const target = args.join(" ") || "~";
+
+        if (target === "~" || target === "/") {
+          setCwd("~");
+          onConstellationFocus(null);
+          playNavigateBack();
+          emit("~");
+          return;
+        }
+
+        const result = resolvePath(cwd, target);
+        if (result.error) {
+          playError();
+          emit(`cd: ${result.error}`, true);
+          return;
+        }
+
+        const newCwd = result.path;
+        setCwd(newCwd);
+
+        const constellation = getConstellationForPath(newCwd);
+        if (constellation) onConstellationFocus(constellation as Constellation);
+
+        if (isLeafPath(newCwd)) {
+          const node = getNodeForPath(newCwd);
+          if (node) {
+            const c = node.constellation as "drop" | "build" | "mind" | "cosmos" | "arena";
+            playNodeEntry(c);
+            emit(newCwd);
+            onNodeOpen(node);
+          }
+        } else if (constellation) {
+          playConstellationEntry(constellation as "drop" | "build" | "mind" | "cosmos" | "arena");
+          const entries = lsPath(newCwd);
+          emit(newCwd);
+          entries.slice(0, 5).forEach((e) => emit(`  ${e.name}`));
+        } else {
+          playNavigateBack();
+          emit(newCwd);
+        }
+        return;
+      }
+
+      if (cmdLower === "ls") {
+        const target = args[0] ? resolvePath(cwd, args[0]).path : cwd;
+        const entries = lsPath(target);
+        if (entries.length === 0) {
+          emit("(empty)");
+        } else {
+          entries.slice(0, 8).forEach((e) => emit(`  ${e.type === "dir" ? "/" : " "}${e.name}`));
+        }
+        return;
+      }
+
+      if (cmdLower === "pwd") {
+        emit(cwd);
+        return;
+      }
+
+      if (cmdLower === "exit") {
+        setCwd("~");
+        onConstellationFocus(null);
+        playNavigateBack();
+        emit("~");
+        return;
+      }
+
+      emit(`not found: ${trimmed}`, true);
+    },
+    [cwd, setCwd, emit, onNodeOpen, onConstellationFocus]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        execute(input);
+        setInput("");
+      }
+      if (e.key === "Escape") setExpanded(false);
+    },
+    [input, execute]
+  );
+
+  const pathColor = getPathColor(cwd);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 50,
+        fontFamily: "var(--font-mono)",
+        fontSize: "12px",
+      }}
+    >
+      {expanded && output.length > 0 && (
+        <div
+          style={{
+            background: "rgba(10, 10, 15, 0.96)",
+            borderTop: "1px solid var(--border-terminal)",
+            padding: "8px 16px",
+            maxHeight: "100px",
+            overflowY: "auto",
+          }}
+        >
+          {output.map((line) => (
+            <div
+              key={line.id}
+              style={{
+                color: line.isError ? "var(--accent-red)" : "var(--text-muted)",
+                lineHeight: 1.6,
+                whiteSpace: "pre",
+              }}
+            >
+              {line.text}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div
+        style={{
+          background: "rgba(10, 10, 15, 0.97)",
+          borderTop: "1px solid var(--border-terminal)",
+          padding: "10px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+        }}
+        onClick={() => {
+          setExpanded(true);
+          inputRef.current?.focus();
+        }}
+      >
+        <span style={{ color: pathColor, whiteSpace: "nowrap", userSelect: "none", fontSize: "11px" }}>
+          {cwd} ❯
+        </span>
+        <input
+          ref={inputRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setExpanded(true)}
+          placeholder={expanded ? "" : "cd · ls · exit"}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          style={{
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            color: "var(--text-primary)",
+            fontFamily: "var(--font-mono)",
+            fontSize: "12px",
+            flex: 1,
+            caretColor: "var(--accent-drop)",
+          }}
+        />
+        <button
+          onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--text-dim)",
+            fontSize: "10px",
+            cursor: "pointer",
+            padding: "0 4px",
+            fontFamily: "var(--font-mono)",
+          }}
+        >
+          {expanded ? "▼" : "▲"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function MobileView({ onNodeOpen }: MobileViewProps) {
-  // Lazy initializer — reads sessionStorage only on the client, avoids effect cascade
   const [signal, setSignal] = useState<SiteSignal | null>(() => {
     if (typeof window === "undefined") return null;
     return getSignal();
   });
   const [activeFilter, setActiveFilter] = useState<Constellation | null>(null);
+  const [cwd, setCwd] = useState("~/cosmos");
+  const [activeConstellation, setActiveConstellation] = useState<Constellation | null>(null);
 
   const handleNodeOpen = (node: ContentNode) => {
     recordInterest(node.constellation as Constellation);
@@ -158,13 +370,31 @@ export default function MobileView({ onNodeOpen }: MobileViewProps) {
     onNodeOpen(node);
   };
 
+  const handleConstellationFocus = (c: Constellation | null) => {
+    setActiveConstellation(c);
+    if (c) setActiveFilter(c);
+    else setActiveFilter(null);
+  };
+
   const toggleFilter = (id: Constellation) => {
-    setActiveFilter((prev) => (prev === id ? null : id));
+    const next = activeFilter === id ? null : id;
+    setActiveFilter(next);
+    if (next) {
+      setCwd(`~/${next}`);
+      setActiveConstellation(next);
+      playConstellationEntry(next);
+    } else {
+      setCwd("~/cosmos");
+      setActiveConstellation(null);
+    }
   };
 
   const visibleConstellations = activeFilter
     ? CONSTELLATIONS.filter((c) => c.id === activeFilter)
     : CONSTELLATIONS;
+
+  const isDominant = (id: Constellation) =>
+    signal?.dominant === id || activeConstellation === id;
 
   return (
     <div
@@ -174,9 +404,9 @@ export default function MobileView({ onNodeOpen }: MobileViewProps) {
         fontFamily: "var(--font-mono)",
         position: "relative",
         overflowX: "hidden",
+        paddingBottom: "64px",
       }}
     >
-      {/* Tobacco haze layer — fixed, behind everything */}
       <div
         aria-hidden="true"
         style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}
@@ -187,22 +417,12 @@ export default function MobileView({ onNodeOpen }: MobileViewProps) {
       </div>
 
       <div style={{ position: "relative", zIndex: 1, padding: "24px 16px" }}>
-        {/* ── Hero ── */}
-        <div
-          style={{
-            textAlign: "center",
-            marginBottom: "28px",
-            paddingTop: "20px",
-          }}
-        >
+        <div style={{ textAlign: "center", marginBottom: "28px", paddingTop: "20px" }}>
           <svg
             width="40"
             height="50"
             viewBox="0 0 32 40"
-            style={{
-              filter: "drop-shadow(0 0 12px rgba(123, 104, 238, 0.8))",
-              marginBottom: "14px",
-            }}
+            style={{ filter: "drop-shadow(0 0 12px rgba(123, 104, 238, 0.8))", marginBottom: "14px" }}
           >
             <path
               d="M16 2 C16 2, 28 18, 28 26 C28 33.2, 22.6 38, 16 38 C9.4 38, 4 33.2, 4 26 C4 18, 16 2, 16 2 Z"
@@ -211,42 +431,14 @@ export default function MobileView({ onNodeOpen }: MobileViewProps) {
               strokeWidth="1.5"
             />
           </svg>
-          <h1
-            style={{
-              color: "var(--text-primary)",
-              fontSize: "20px",
-              fontWeight: 700,
-              marginBottom: "4px",
-            }}
-          >
+          <h1 style={{ color: "var(--text-primary)", fontSize: "20px", fontWeight: 700, marginBottom: "4px" }}>
             Prakhar
           </h1>
-          <p
-            style={{
-              color: "var(--text-muted)",
-              fontSize: "12px",
-              marginBottom: "10px",
-            }}
-          >
+          <p style={{ color: "var(--text-muted)", fontSize: "12px" }}>
             a drop in the cosmos
           </p>
-          {/* Tobacco note — ambient, always present */}
-          {signal && (
-            <p
-              style={{
-                color: "var(--accent-tobacco)",
-                fontSize: "10px",
-                letterSpacing: "0.1em",
-                opacity: 0.55,
-                fontStyle: "italic",
-              }}
-            >
-              {signal.tobaccoNote}
-            </p>
-          )}
         </div>
 
-        {/* ── Adaptive hint — appears after first interaction ── */}
         {signal && signal.sessionDepth > 0 && (
           <div
             style={{
@@ -260,30 +452,15 @@ export default function MobileView({ onNodeOpen }: MobileViewProps) {
               gap: "10px",
             }}
           >
-            <span
-              style={{
-                color: "var(--accent-tobacco)",
-                fontSize: "12px",
-                opacity: 0.5,
-                flexShrink: 0,
-              }}
-            >
+            <span style={{ color: "var(--accent-tobacco)", fontSize: "12px", opacity: 0.5, flexShrink: 0 }}>
               ◈
             </span>
-            <span
-              style={{
-                color: "var(--text-muted)",
-                fontSize: "11px",
-                fontStyle: "italic",
-                lineHeight: 1.5,
-              }}
-            >
+            <span style={{ color: "var(--text-muted)", fontSize: "11px", fontStyle: "italic", lineHeight: 1.5 }}>
               {signal.hint}
             </span>
           </div>
         )}
 
-        {/* ── Constellation filter pills ── */}
         <div
           style={{
             display: "flex",
@@ -302,9 +479,7 @@ export default function MobileView({ onNodeOpen }: MobileViewProps) {
                 key={c.id}
                 onClick={() => toggleFilter(c.id)}
                 style={{
-                  background: active
-                    ? `rgba(${hexToRgb(c.color)}, 0.14)`
-                    : "rgba(255,255,255,0.025)",
+                  background: active ? `rgba(${hexToRgb(c.color)}, 0.14)` : "rgba(255,255,255,0.025)",
                   border: `1px solid ${active ? c.color : "var(--border-dim)"}`,
                   borderRadius: "20px",
                   padding: "5px 12px",
@@ -324,14 +499,12 @@ export default function MobileView({ onNodeOpen }: MobileViewProps) {
           })}
         </div>
 
-        {/* ── Constellation sections ── */}
         {visibleConstellations.map((c) => {
           const nodes = allNodes.filter((n) => n.constellation === c.id);
-          const isDominant = signal?.dominant === c.id;
+          const dominant = isDominant(c.id);
 
           return (
             <div key={c.id} style={{ marginBottom: "28px" }}>
-              {/* Section header */}
               <div
                 style={{
                   display: "flex",
@@ -347,38 +520,20 @@ export default function MobileView({ onNodeOpen }: MobileViewProps) {
                     fontSize: "12px",
                     fontWeight: 700,
                     letterSpacing: "0.12em",
-                    textShadow: isDominant
-                      ? `0 0 12px rgba(${hexToRgb(c.color)}, 0.5)`
-                      : "none",
+                    textShadow: dominant ? `0 0 12px rgba(${hexToRgb(c.color)}, 0.5)` : "none",
                     transition: "text-shadow 0.4s ease",
                   }}
                 >
                   {c.symbol} {c.label}
                 </span>
-                <span
-                  style={{
-                    color: "var(--text-dim)",
-                    fontSize: "10px",
-                  }}
-                >
-                  — {c.desc}
-                </span>
-                {isDominant && (
-                  <span
-                    style={{
-                      color: "var(--accent-tobacco)",
-                      fontSize: "9px",
-                      opacity: 0.5,
-                      marginLeft: "auto",
-                      letterSpacing: "0.08em",
-                    }}
-                  >
+                <span style={{ color: "var(--text-dim)", fontSize: "10px" }}>— {c.desc}</span>
+                {dominant && (
+                  <span style={{ color: "var(--accent-tobacco)", fontSize: "9px", opacity: 0.5, marginLeft: "auto", letterSpacing: "0.08em" }}>
                     ◈ active
                   </span>
                 )}
               </div>
 
-              {/* Horizontally scrollable node cards */}
               <div
                 style={{
                   display: "flex",
@@ -398,14 +553,8 @@ export default function MobileView({ onNodeOpen }: MobileViewProps) {
                       key={node.id}
                       onClick={() => handleNodeOpen(node)}
                       style={{
-                        background: isDominant
-                          ? `rgba(${hexToRgb(c.color)}, 0.06)`
-                          : "var(--bg-terminal)",
-                        border: `1px solid ${
-                          isDominant
-                            ? `rgba(${hexToRgb(c.color)}, 0.3)`
-                            : "var(--border-terminal)"
-                        }`,
+                        background: dominant ? `rgba(${hexToRgb(c.color)}, 0.06)` : "var(--bg-terminal)",
+                        border: `1px solid ${dominant ? `rgba(${hexToRgb(c.color)}, 0.3)` : "var(--border-terminal)"}`,
                         borderRadius: "10px",
                         padding: "12px 14px",
                         textAlign: "left",
@@ -419,50 +568,32 @@ export default function MobileView({ onNodeOpen }: MobileViewProps) {
                         overflow: "hidden",
                       }}
                     >
-                      {/* Tobacco haze overlay on dominant constellation cards */}
-                      {isDominant && (
+                      {dominant && (
                         <div
                           aria-hidden="true"
                           style={{
                             position: "absolute",
                             inset: 0,
-                            background:
-                              "radial-gradient(ellipse at top right, rgba(196,149,106,0.05), transparent 70%)",
+                            background: "radial-gradient(ellipse at top right, rgba(196,149,106,0.05), transparent 70%)",
                             pointerEvents: "none",
                           }}
                         />
                       )}
-
-                      <div
-                        style={{
-                          color: "var(--text-primary)",
-                          fontSize: "12px",
-                          lineHeight: 1.4,
-                          marginBottom: node.subtitle ? "4px" : 0,
-                        }}
-                      >
+                      <div style={{ color: "var(--text-primary)", fontSize: "12px", lineHeight: 1.4, marginBottom: node.subtitle ? "4px" : 0 }}>
                         {node.title}
                       </div>
                       {node.subtitle && (
-                        <div
-                          style={{
-                            color: "var(--text-dim)",
-                            fontSize: "10px",
-                            lineHeight: 1.3,
-                          }}
-                        >
+                        <div style={{ color: "var(--text-dim)", fontSize: "10px", lineHeight: 1.3 }}>
                           {node.subtitle}
                         </div>
                       )}
-
-                      {/* Weight indicator bar */}
                       <div
                         style={{
                           marginTop: "10px",
                           width: `${Math.min(90, 25 + (node.weight || 5) * 7)}%`,
                           height: "1px",
                           background: c.color,
-                          opacity: isDominant ? 0.45 : 0.2,
+                          opacity: dominant ? 0.45 : 0.2,
                           transition: "opacity 0.3s ease",
                         }}
                       />
@@ -474,58 +605,27 @@ export default function MobileView({ onNodeOpen }: MobileViewProps) {
           );
         })}
 
-        {/* ── Signal trace — shown after first interaction ── */}
-        {signal && signal.sessionDepth > 0 && (
-          <SignalTrace signal={signal} />
-        )}
+        {signal && signal.sessionDepth > 0 && <SignalTrace signal={signal} />}
 
-        {/* ── Footer ── */}
-        <div
-          style={{
-            textAlign: "center",
-            paddingBottom: "40px",
-            display: "flex",
-            justifyContent: "center",
-            gap: "24px",
-          }}
-        >
-          <a
-            href="/hire"
-            style={{
-              color: "var(--accent-drop)",
-              fontSize: "12px",
-              textDecoration: "none",
-              fontFamily: "var(--font-mono)",
-            }}
-          >
+        <div style={{ textAlign: "center", paddingBottom: "16px", display: "flex", justifyContent: "center", gap: "24px" }}>
+          <a href="/hire" style={{ color: "var(--accent-drop)", fontSize: "12px", textDecoration: "none", fontFamily: "var(--font-mono)" }}>
             [hire]
           </a>
-          <a
-            href="https://lichess.org/@/Dropstone34"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              color: "var(--text-muted)",
-              fontSize: "12px",
-              textDecoration: "none",
-              fontFamily: "var(--font-mono)",
-            }}
-          >
+          <a href="https://lichess.org/@/Dropstone34" target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-muted)", fontSize: "12px", textDecoration: "none", fontFamily: "var(--font-mono)" }}>
             [chess]
           </a>
-          <a
-            href="/about"
-            style={{
-              color: "var(--text-muted)",
-              fontSize: "12px",
-              textDecoration: "none",
-              fontFamily: "var(--font-mono)",
-            }}
-          >
+          <a href="/about" style={{ color: "var(--text-muted)", fontSize: "12px", textDecoration: "none", fontFamily: "var(--font-mono)" }}>
             [about]
           </a>
         </div>
       </div>
+
+      <MobileCliBar
+        cwd={cwd}
+        setCwd={setCwd}
+        onNodeOpen={handleNodeOpen}
+        onConstellationFocus={handleConstellationFocus}
+      />
     </div>
   );
 }

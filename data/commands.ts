@@ -25,7 +25,7 @@ a drop in the cosmos.
   cosmos  — what I wonder
   arena   — how I compete
 
-→ type any constellation name to enter it`,
+→ cd <constellation> to enter · ls to list nodes`,
   },
   {
     command: "wander",
@@ -50,7 +50,7 @@ a drop in the cosmos.
   philosophy  — Nietzsche, Rousseau, Smith, Dostoevsky
   frost       — Stopping by Woods on a Snowy Evening
 
-→ type: books · philosophy · frost`,
+→ cd mind · ls · cd <node>`,
   },
   {
     command: "cosmos",
@@ -64,7 +64,7 @@ a drop in the cosmos.
   fermi       — where is everybody?
   vedic       — ancient cosmology
 
-→ type any name to explore`,
+→ cd cosmos · ls · cd <node>`,
   },
   {
     command: "arena",
@@ -78,7 +78,7 @@ a drop in the cosmos.
   f1          — Max Verstappen + Ferrari
   running     — 10k PR: 48:00
 
-→ type any name to explore`,
+→ cd arena · ls · cd <node>`,
   },
   {
     command: "chess",
@@ -257,20 +257,35 @@ AUTHOR
     type: "info",
     output: `◈ COMMANDS
 
+  navigation
+  ──────────
+  cd <path>   — enter a constellation, node, or directory
+  cd ..       — go up one level
+  ls [path]   — list contents of current or given path
+  pwd         — print current path
+  exit        — return to ~/cosmos
+
+  content
+  ───────
+  cat <file>  — read a node or essay inline
   whoami      — identify the drop
   explore     — show all constellations
   wander      — go somewhere unexpected
-  
+
+  pages
+  ─────
   now         — current signals
   essays      — long-form writing
   notes       — short garden entries
-  build       — engineering work and projects
+  build       — engineering work
   signals     — live public signals
-  
+
   mind        — what I think
   cosmos      — what I wonder
   arena       — how I compete
-  
+
+  other
+  ─────
   chess       — live chess rating
   books       — the reading list
   github      — open GitHub
@@ -278,7 +293,8 @@ AUTHOR
   hire        — work with me
   subscribe   — Substack newsletter
   manifesto   — what I believe
-  
+  sound on/off — toggle audio
+
   [there are other commands. find them.]`,
   },
 ];
