@@ -9,13 +9,11 @@ export const metadata: Metadata = {
 };
 
 const AchievementsHero = dynamic(
-  () => import("@/components/achievements/AchievementsHero"),
-  { ssr: false }
+  () => import("@/components/achievements/AchievementsHero")
 );
 
 const BentoGrid = dynamic(
-  () => import("@/components/achievements/BentoGrid"),
-  { ssr: false }
+  () => import("@/components/achievements/BentoGrid")
 );
 
 export default function AchievementsPage() {
