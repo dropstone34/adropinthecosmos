@@ -4,14 +4,14 @@ import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 
 // Approximate SVG coordinates for destinations on a simplified world map
-// Map viewBox: 0 0 800 400
+// Map viewBox: 0 0 800 380 — all destinations in India/SE Asia cluster
 const DESTINATIONS = [
-  { name: "India", x: 560, y: 195, color: "#f97316" },
-  { name: "Dubai", x: 520, y: 200, color: "#fbbf24" },
-  { name: "Singapore", x: 620, y: 240, color: "#34d399" },
-  { name: "Thailand", x: 610, y: 215, color: "#06b6d4" },
-  { name: "Nepal", x: 575, y: 185, color: "#a78bfa" },
-  { name: "Sri Lanka", x: 570, y: 225, color: "#f472b6" },
+  { name: "Andaman", x: 628, y: 222, color: "#06b6d4" },
+  { name: "Coorg", x: 552, y: 218, color: "#22c55e" },
+  { name: "Thailand", x: 618, y: 210, color: "#f97316" },
+  { name: "Pondicherry", x: 562, y: 224, color: "#fbbf24" },
+  { name: "Gokarna", x: 545, y: 214, color: "#a78bfa" },
+  { name: "Uttarakhand", x: 558, y: 183, color: "#f472b6" },
 ];
 
 // Simplified world map path (very minimal outline)

@@ -92,10 +92,10 @@ export const achievements: Achievement[] = [
       { label: "Continents", value: "1" },
     ],
     description:
-      "Six destinations and counting. Each place recalibrates your sense of scale — what feels enormous at home becomes a dot on the map.",
+      "Andaman, Coorg, Thailand, Pondicherry, Gokarna, Uttarakhand. Six places that each rewired something — the sea, the hills, the coast, the quiet.",
     shapedMe:
       "Travel is the fastest way to dissolve assumptions. You realize your defaults — food, language, time, space — are just one configuration among thousands. That humility is useful everywhere.",
-    tags: ["exploration", "perspective", "geography"],
+    tags: ["Andaman", "Coorg", "Gokarna"],
     accentColor: "#06b6d4",
   },
   {
