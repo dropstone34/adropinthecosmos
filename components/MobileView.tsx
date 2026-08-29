@@ -607,7 +607,10 @@ export default function MobileView({ onNodeOpen }: MobileViewProps) {
 
         {signal && signal.sessionDepth > 0 && <SignalTrace signal={signal} />}
 
-        <div style={{ textAlign: "center", paddingBottom: "16px", display: "flex", justifyContent: "center", gap: "24px" }}>
+        <div style={{ textAlign: "center", paddingBottom: "16px", display: "flex", justifyContent: "center", gap: "24px", flexWrap: "wrap" }}>
+          <a href="/achievements" style={{ color: "var(--accent-gold)", fontSize: "12px", textDecoration: "none", fontFamily: "var(--font-mono)" }}>
+            [achievements]
+          </a>
           <a href="/hire" style={{ color: "var(--accent-drop)", fontSize: "12px", textDecoration: "none", fontFamily: "var(--font-mono)" }}>
             [hire]
           </a>

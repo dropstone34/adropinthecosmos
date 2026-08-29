@@ -5,6 +5,7 @@ import CliBar from "@/components/CliBar";
 const navItems = [
   { href: "/", label: "cosmos" },
   { href: "/now", label: "now" },
+  { href: "/achievements", label: "achievements" },
   { href: "/build", label: "build" },
   { href: "/signals", label: "signals" },
   { href: "/essays", label: "essays" },
